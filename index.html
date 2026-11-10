@@ -1,0 +1,189 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Tablero de Guardia y Control de Préstamos - Comunicaciones</title>
+    <style>
+        body { background-color: #0d1117; color: #c9d1d9; font-family: Arial, sans-serif; padding: 20px; margin: 0; }
+        
+        header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 2px solid #30363d; 
+            padding-bottom: 15px; 
+            margin-bottom: 15px;
+        }
+        header h1 { color: #58a6ff; font-size: 20px; margin: 0; }
+        
+        /* Barra de notificaciones integrada (reemplaza a los alerts bloqueados) */
+        .barra-aviso {
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            font-size: 14px;
+            display: none;
+        }
+        .aviso-error { background: #da363333; border: 1px solid #da3633; color: #ff7b72; }
+        .aviso-exito { background: #23863633; border: 1px solid #238636; color: #3fb950; }
+
+        .contenedor { display: flex; gap: 20px; }
+        .caja-izq { width: 33%; display: flex; flex-direction: column; gap: 15px; }
+        .panel-caja { background: #161b22; padding: 18px; border: 1px solid #30363d; border-radius: 8px; }
+        .caja-der { width: 67%; display: flex; flex-direction: column; gap: 15px; }
+        
+        h3 { margin-top: 0; color: #58a6ff; font-size: 16px; border-bottom: 1px solid #30363d; padding-bottom: 8px; }
+        label { display: block; margin-top: 12px; font-weight: bold; color: #8b949e; font-size: 13px; }
+        input, select, textarea { width: 95%; padding: 8px; margin-top: 5px; background: #0d1117; color: white; border: 1px solid #30363d; border-radius: 4px; }
+        
+        .fila-inline { display: flex; gap: 8px; margin-top: 5px; width: 98%; }
+        .fila-inline select { width: 45%; margin-top: 0; }
+        .fila-inline input { width: 55%; margin-top: 0; }
+
+        button { padding: 10px; font-weight: bold; border-radius: 4px; cursor: pointer; border: none; }
+        .btn-verde { width: 98%; margin-top: 15px; background: #238636; color: white; font-size: 14px; }
+        .btn-verde:hover { background: #2ea043; }
+        .btn-azul { background: #1f6feb; color: white; padding: 8px 14px; }
+        .btn-azul:hover { background: #388bfd; }
+        .btn-gris { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; width: 98%; margin-top: 12px; }
+        .btn-gris:hover { background: #30363d; }
+        
+        .btn-accion { background: #21262d; border: 1px solid #30363d; color: white; padding: 5px 8px; font-size: 12px; margin-right: 4px; }
+        .btn-accion:hover { border-color: #58a6ff; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        th, td { border-bottom: 1px solid #30363d; padding: 10px 8px; text-align: left; }
+        th { color: #58a6ff; font-size: 12px; text-transform: uppercase; }
+        
+        .estado { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; text-transform: uppercase; display: inline-block; }
+        .Pendiente { background: #da3633; color: white; }
+        .Recibido { background: #1f6feb; color: white; }
+        .Prestado { background: #d29922; color: black; }
+        .Devuelto { background: #238636; color: white; }
+        .registro-devolucion { display: block; margin-top: 5px; font-size: 12px; color: #3fb950; font-weight: bold; }
+
+        .panel-auditoria { border-color: #da363355; }
+        .panel-auditoria h3 { color: #f85149; }
+        .lista-log { list-style: none; padding: 0; margin: 0; max-height: 110px; overflow-y: auto; font-size: 13px; color: #8b949e; }
+        .lista-log li { padding: 6px 0; border-bottom: 1px solid #21262d; }
+        .tag-usuario { background: #da363322; color: #f85149; border: 1px solid #da3633; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+        
+        .lista-usuarios-print { margin-top: 10px; font-size: 13px; background: #0d1117; padding: 10px; border-radius: 4px; border: 1px solid #30363d; max-height: 110px; overflow-y: auto; }
+        .user-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #21262d; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 id="txt_titulo_guardia">SISTEMA DE CONTROL DE GUARDIA - SIN FIRMAR</h1>
+        <div style="font-size: 13px; color: #3fb950; font-weight: bold;">🟢 SISTEMA DIRECTO SIN VENTANAS EMERGENTES</div>
+    </header>
+
+    <!-- CARTEL DE AVISOS INTEGRADO EN LA PANTALLA -->
+    <div id="caja_notificacion" class="barra-aviso"></div>
+
+    <div class="contenedor">
+        
+        <!-- COLUMNA IZQUIERDA -->
+        <div class="caja-izq">
+            
+            <!-- 1. INICIO DE GUARDIA DIRECTO -->
+            <div class="panel-caja" style="border-color: #1f6feb;">
+                <h3 style="margin-bottom:5px;">👤 1. Tomar Guardia (PIN)</h3>
+                <div class="fila-inline">
+                    <input type="password" id="input_pin_login" placeholder="Ingrese PIN (Ej: 1111)" style="width: 60%; margin-top:0;">
+                    <button class="btn-azul" style="width: 40%;" onclick="iniciarGuardiaDirecto()">Firmar</button>
+                </div>
+                <div style="margin-top:8px; font-size:13px; color:#8b949e;">
+                    Operador Activo: <strong id="lbl_operador_activo" style="color:#58a6ff;">Ninguno</strong>
+                </div>
+            </div>
+
+            <!-- 2. FORMULARIO DE CARGA -->
+            <div class="panel-caja">
+                <h3>📥 2. Cargar Novedad o Préstamo</h3>
+
+                <label>Detalle del Equipo o Tarea:</label>
+                <textarea id="cfg_detalle" rows="2" placeholder="Ej: Handy VHF N°8, Pinzas..."></textarea>
+
+                <label>Clasificación Operativa:</label>
+                <select id="cfg_estado">
+                    <option value="Pendiente">Pendiente (Falta hacer)</option>
+                    <option value="Recibido">Recibido (Entra equipo)</option>
+                    <option value="Prestado">Prestado (Se entrega herramienta)</option>
+                    <option value="Devuelto">Devuelto / Finalizado</option>
+                </select>
+
+                <label>Quién Entrega o Retira (Externo):</label>
+                <div class="fila-inline">
+                    <select id="cfg_rango_ext">
+                        <option value="">-- Sin Rango --</option>
+                        <optgroup label="SUBOFICIALES"><option value="AM">AM</option><option value="AP">AP</option><option value="AI">AI</option><option value="AS">AS</option><option value="AT">AT</option><option value="CI">CI</option><option value="CS">CS</option><option value="MO">MO</option></optgroup>
+                        <optgroup label="OFICIALES"><option value="PG">PG</option><option value="PM">PM</option><option value="PP">PP</option><option value="PR">PR</option><option value="SP">SP</option><option value="OP">OP</option><option value="OX">OX</option><option value="OA">OA</option></optgroup>
+                    </select>
+                    <input type="text" id="cfg_apellido_ext" placeholder="Apellido">
+                </div>
+
+                <button class="btn-verde" onclick="ejecutarPublicacion()">PUBLICAR EN PANTALLA</button>
+            </div>
+
+            <!-- 3. PANEL DE CREAR USUARIOS DIRECTO -->
+            <div class="panel-caja">
+                <h3>⚙️ 3. Administrar Operadores</h3>
+                
+                <label>Clave Maestra de Administrador:</label>
+                <input type="password" id="adm_clave_maestra" placeholder="Clave por defecto: 0000">
+
+                <label>Grado y Apellido del Nuevo Operador:</label>
+                <input type="text" id="adm_nombre" placeholder="Ej: CI GOMEZ">
+                
+                <label>Asignar Nuevo PIN Único:</label>
+                <input type="text" id="adm_pin" placeholder="Ej: 4589">
+                
+                <button class="btn-gris" onclick="ejecutarAltaUsuario()">+ Guardar Nuevo Operador</button>
+                
+                <div class="lista-usuarios-print" id="print_lista_usuarios"></div>
+            </div>
+
+        </div>
+
+        <!-- COLUMNA DERECHA -->
+        <div class="caja-der">
+            <div class="panel-caja">
+                <h3>📋 Listado Activo y Trazabilidad de Devoluciones</h3>
+                <p style="font-size:12px; color:#8b949e; margin-top:0;">* Para marcar devolución (✔️) o borrar (X), debe tener su <b>Guardia Firmada</b> en el panel 1.</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 14%;">Fecha / Hora</th>
+                            <th style="width: 36%;">Detalle / Trazabilidad</th>
+                            <th style="width: 15%;">Entrega/Retira</th>
+                            <th style="width: 15%;">Recibe/Presta</th>
+                            <th style="width: 10%;">Estado</th>
+                            <th style="width: 10%;">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="print_tabla_principal">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="panel-caja panel-auditoria">
+                <h3>🛡️ Registro de Seguridad (Historial de Tareas Eliminadas)</h3>
+                <ul class="lista-log" id="print_historial_borrados">
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        var CLAVE_MAESTRA = "0000";
+        var globalRegistros = [];
+        var globalBorrados = [];
+        var globalUsuarios = { "1111": "CI ROMERO" };
+        var globalOperadorLogueado = "";
+
+        // Función para mostrar mensajes en pantalla sin usar alert()
+        function mostrarAviso(texto, esError) {
